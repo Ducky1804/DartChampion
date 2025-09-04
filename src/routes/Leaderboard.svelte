@@ -1,19 +1,25 @@
 <script>
   import { db } from '../lib/firebase'
-  import { collection, getDocs } from 'firebase/firestore'
+  import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
   let championshipId = ''
   let leaderboard = []
 
   async function loadLeaderboard() {
     if (!championshipId) return
+    const champDoc = await getDoc(doc(db, 'championships', championshipId))
+    const championship = champDoc.exists() ? champDoc.data() : { players: [] }
     const resultsSnap = await getDocs(collection(db, 'championships', championshipId, 'results'))
     const totals = {}
     resultsSnap.forEach(d => {
-      const { player, score } = d.data()
-      totals[player] = (totals[player] || 0) + (Number(score) || 0)
+      const { userId, guestName, score } = d.data()
+      const key = userId ? `user:${userId}` : `guest:${guestName}`
+      totals[key] = (totals[key] || 0) + (Number(score) || 0)
     })
+    const nameByKey = Object.fromEntries(
+      championship.players.map(p => [p.mode === 'user' ? `user:${p.userId}` : `guest:${p.displayName}`, p.displayName])
+    )
     leaderboard = Object.entries(totals)
-      .map(([player, total]) => ({ player, total }))
+      .map(([key, total]) => ({ key, name: nameByKey[key] || key, total }))
       .sort((a, b) => b.total - a.total)
   }
 </script>
@@ -39,7 +45,7 @@
         {#each leaderboard as row, i}
           <tr>
             <td>{i + 1}</td>
-            <td>{row.player}</td>
+            <td>{row.name}</td>
             <td class="font-semibold">{row.total}</td>
           </tr>
         {/each}
