@@ -16,10 +16,7 @@
     <div class="card bg-base-200 hover:shadow-lg">
       <div class="card-body">
         <div class="flex justify-between items-center">
-          <h3 class="card-title">{t.name || 'Championship'} • {t.id}</h3>
-          {#if t.locked}
-            <div class="badge badge-neutral">Locked</div>
-          {/if}
+          <h3 class="card-title">{t.name || 'Championship'}</h3>
         </div>
         <p>Players: {t.players.length}</p>
         <div class="card-actions justify-end">

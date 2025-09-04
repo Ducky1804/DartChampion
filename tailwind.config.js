@@ -2,7 +2,6 @@
 export default {
   content: [
     './index.html',
-    './public/index.html',
     "./src/**/*.{svelte,js,ts}"
   ],
   theme: {
@@ -10,7 +9,7 @@ export default {
   },
   plugins: [require('daisyui')],
   daisyui: {
-    themes: ['forest', 'light'],
+    themes: true,
   },
 }
 

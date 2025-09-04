@@ -15,18 +15,6 @@
       <p>Choose player count and create profiles.</p>
     </div>
   </a>
-  <a href="/results" class="card bg-base-200 hover:shadow-lg">
-    <div class="card-body">
-      <h3 class="card-title">Enter Results</h3>
-      <p>Log games and keep scores updated.</p>
-    </div>
-  </a>
-  <a href="/leaderboard" class="card bg-base-200 hover:shadow-lg">
-    <div class="card-body">
-      <h3 class="card-title">Leaderboard</h3>
-      <p>See standings across all players.</p>
-    </div>
-  </a>
-  </div>
+</div>
 
 
