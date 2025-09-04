@@ -23,7 +23,7 @@
       <button class="btn btn-ghost" on:click={() => navigateTo('/setup')}>Create</button>
       <button class="btn btn-ghost" on:click={() => navigateTo('/leaderboards')}>Leaderboards</button>
       {#if $userStore}
-        <button class="btn" on:click={() => navigateTo('/profile')}>Profile</button>
+        <button class="btn btn-ghost" on:click={() => navigateTo('/profile')}>Profile</button>
         <button class="btn btn-outline" on:click={() => auth.signOut()}>Logout</button>
       {:else}
         <button class="btn btn-primary" on:click={() => navigateTo('/login')}>Login</button>

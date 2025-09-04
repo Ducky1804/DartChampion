@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { db } from '../lib/firebase'
-  import { doc, getDoc, collection, getDocs, addDoc, updateDoc, query, orderBy } from 'firebase/firestore'
+  import {doc, getDoc, collection, getDocs, addDoc, updateDoc, query, orderBy, where} from 'firebase/firestore'
   let championshipId = ''
   let championship = null
   let matches = []
@@ -31,9 +31,11 @@
         matches = []
         return
       }
-      const ms = await getDocs(query(collection(db, 'championships', championshipId, 'matches'), orderBy('createdAt', 'asc')))
-      matches = ms.docs.map(d => ({ id: d.id, ...d.data() }))
-      // compute rounds and only set selected if current is invalid
+
+      const matchesRef = collection(db, 'championships', championshipId, 'matches')
+      const snap = await getDocs(matchesRef)
+      matches = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+
       roundsList = listRounds()
       if (roundsList.length > 0 && !roundsList.includes(selectedRound)) {
         selectedRound = roundsList[0]
@@ -173,10 +175,14 @@
     await loadAll()
   }
 
-  function semifinalsDone() {
-    const semis = matches.filter(m => m.stage === 'semifinals')
-    console.log(semis);
-    console.log(matches);
+  async function semifinalsDone() {
+    const q = query(
+            collection(db, 'championships', championshipId, 'matches'),
+            where('stage', '==', 'semifinals')
+    )
+    const snap = await getDocs(q)
+    const semis = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+
     return semis.length === 2 && semis.every(m => m.scoreA != null && m.scoreB != null)
   }
 
@@ -215,8 +221,14 @@
     await loadAll()
   }
 
-  function finalsDone() {
-    const finals = matches.filter(m => m.stage === 'finals')
+  async function finalsDone() {
+    const q = query(
+            collection(db, 'championships', championshipId, 'matches'),
+            where('stage', '==', 'finals')
+    )
+    const snap = await getDocs(q)
+    const finals = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+
     return finals.length === 2 && finals.every(m => m.scoreA != null && m.scoreB != null)
   }
 
@@ -247,7 +259,7 @@
 
 {#if championship}
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-2xl font-semibold">{championship.name || 'Tournament'} • {championship.id}</h2>
+    <h2 class="text-2xl font-semibold">{championship.name || 'Tournament'}</h2>
     <div class="flex gap-2 items-center">
       {#if championship.stage === 'round_robin'}
         <button class="btn btn-success" on:click={advanceToSemifinals}>Go to semifinals</button>
@@ -255,30 +267,78 @@
         <button class="btn btn-success" on:click={advanceToFinals} disabled={!semifinalsDone()}>Go to finals</button>
       {:else if championship.stage === 'finals'}
         <button class="btn btn-warning" on:click={finishTournament} disabled={!finalsDone()}>Finish tournament</button>
-      {:else}
-        <div class="badge badge-neutral">Finished</div>
       {/if}
     </div>
   </div>
 
   {#if championship.stage === 'finished' && championship.podium}
-    <div class="my-6">
-      <h3 class="text-xl font-semibold mb-3">Podium</h3>
-      <div class="grid grid-cols-3 gap-4 items-end text-center">
-        <div>
-          <div class="text-sm mb-1">Silver</div>
-          <div class="bg-gray-300 rounded-t h-24 flex items-center justify-center font-semibold">2</div>
-          <div class="mt-2">{playerNameFromKey(championship.podium.silver)}</div>
+    <div class="my-8 relative">
+      <!-- Confetti effect -->
+      <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute top-0 left-1/4 animate-bounce text-yellow-400 text-2xl">✨</div>
+        <div class="absolute top-2 right-1/4 animate-pulse text-yellow-300 text-xl">⭐</div>
+        <div class="absolute top-4 left-1/3 animate-ping text-yellow-500 text-lg">🎉</div>
+        <div class="absolute top-1 right-1/3 animate-bounce text-yellow-400 text-xl delay-300">✨</div>
+      </div>
+
+      <div class="text-center mb-8">
+        <h3 class="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent mb-2">
+          🏆 Tournament Champions 🏆
+        </h3>
+        <div class="text-base-content/60 text-lg">Congratulations to our winners!</div>
+      </div>
+
+      <div class="flex justify-center items-end gap-6 max-w-2xl mx-auto">
+        <!-- Silver (2nd Place) -->
+        <div class="flex flex-col items-center transform hover:scale-105 transition-transform duration-300">
+          <div class="mb-3">
+            <div class="w-16 h-16 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-gray-200">
+              🥈
+            </div>
+          </div>
+          <div class="bg-gradient-to-t from-gray-400 to-gray-300 rounded-t-lg shadow-xl w-24 h-20 flex flex-col items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <div class="text-white font-bold text-xl relative z-10">2</div>
+            <div class="text-white/80 text-xs relative z-10">SECOND</div>
+          </div>
+          <div class="mt-3 px-3 py-1 bg-base-200 rounded-lg shadow-sm">
+            <div class="font-semibold text-sm">{playerNameFromKey(championship.podium.silver)}</div>
+          </div>
         </div>
-        <div>
-          <div class="text-sm mb-1">Gold</div>
-          <div class="bg-yellow-400 rounded-t h-32 flex items-center justify-center font-semibold">1</div>
-          <div class="mt-2 font-bold">{playerNameFromKey(championship.podium.gold)}</div>
+
+        <!-- Gold (1st Place) -->
+        <div class="flex flex-col items-center transform hover:scale-105 transition-transform duration-300 -mt-4">
+          <div class="mb-4 relative">
+            <div class="absolute -top-2 -right-2 text-yellow-400 animate-pulse">👑</div>
+            <div class="w-20 h-20 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-full flex items-center justify-center text-3xl font-bold shadow-xl ring-4 ring-yellow-200">
+              🥇
+            </div>
+          </div>
+          <div class="bg-gradient-to-t from-yellow-700 via-yellow-500 to-yellow-500 rounded-t-lg shadow-2xl w-28 h-28 flex flex-col items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-white/20"></div>
+            <div class="text-white font-bold text-2xl relative z-10 drop-shadow-lg">1</div>
+            <div class="text-white/90 text-xs relative z-10 font-semibold tracking-wider">CHAMPION</div>
+          </div>
+          <div class="mt-4 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-700 text-white rounded-lg shadow-lg">
+            <div class="font-bold text-base">{playerNameFromKey(championship.podium.gold)}</div>
+          </div>
         </div>
-        <div>
-          <div class="text-sm mb-1">Bronze</div>
-          <div class="bg-amber-600 rounded-t h-20 flex items-center justify-center font-semibold text-white">3</div>
-          <div class="mt-2">{playerNameFromKey(championship.podium.bronze)}</div>
+
+        <!-- Bronze (3rd Place) -->
+        <div class="flex flex-col items-center transform hover:scale-105 transition-transform duration-300">
+          <div class="mb-3">
+            <div class="w-16 h-16 bg-gradient-to-br from-amber-600 to-amber-700 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-amber-200">
+              🥉
+            </div>
+          </div>
+          <div class="bg-gradient-to-t from-amber-700 to-amber-600 rounded-t-lg shadow-xl w-24 h-16 flex flex-col items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <div class="text-white font-bold text-xl relative z-10">3</div>
+            <div class="text-white/80 text-xs relative z-10">THIRD</div>
+          </div>
+          <div class="mt-3 px-3 py-1 bg-base-200 rounded-lg shadow-sm">
+            <div class="font-semibold text-sm">{playerNameFromKey(championship.podium.bronze)}</div>
+          </div>
         </div>
       </div>
     </div>
